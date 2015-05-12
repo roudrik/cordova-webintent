@@ -1,6 +1,8 @@
 package com.borismus.webintent;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.cordova.CordovaActivity;
@@ -31,8 +33,8 @@ import org.apache.cordova.PluginResult;
 public class WebIntent extends CordovaPlugin {
 
     private CallbackContext onNewIntentGetUriCallbackContext = null;
-    private CallbackContext onNewIntentGetExtraCallbackContext = null;
-    private String onNewIntentGetExtraNameContext = null;
+    private List<CallbackContext> onNewIntentGetExtraCallbackContext = new ArrayList<CallbackContext>();
+    private List<String> onNewIntentGetExtraNameContext = new ArrayList<String>();
 
     //public boolean execute(String action, JSONArray args, String callbackId) {
     @Override
@@ -133,8 +135,8 @@ public class WebIntent extends CordovaPlugin {
                 }
 
                 //save reference to the callback; will be called on "new intent" events
-                this.onNewIntentGetExtraCallbackContext = callbackContext;
-                this.onNewIntentGetExtraNameContext = args.getString(0);
+                this.onNewIntentGetExtraCallbackContext.add(callbackContext);
+                this.onNewIntentGetExtraNameContext.add(args.getString(0));
 
                 PluginResult result = new PluginResult(PluginResult.Status.NO_RESULT);
                 result.setKeepCallback(true); //re-use the callback on intent events
@@ -181,7 +183,7 @@ public class WebIntent extends CordovaPlugin {
             return false;
         }
     }
-
+    
     @Override
     public void onNewIntent(Intent intent) {
 
@@ -191,16 +193,21 @@ public class WebIntent extends CordovaPlugin {
             this.onNewIntentGetUriCallbackContext.sendPluginResult(result);
         }
 
-        if (this.onNewIntentGetExtraCallbackContext != null) {
-            if (intent.hasExtra(this.onNewIntentGetExtraNameContext)) {
-                PluginResult result = new PluginResult(PluginResult.Status.OK, intent.getStringExtra(this.onNewIntentGetExtraNameContext));
-                result.setKeepCallback(true);
-                this.onNewIntentGetExtraCallbackContext.sendPluginResult(result);
-            } else {
-                PluginResult result = new PluginResult(PluginResult.Status.ERROR);
-                result.setKeepCallback(true);
-                this.onNewIntentGetExtraCallbackContext.sendPluginResult(result);
-            }
+        if (!this.onNewIntentGetExtraCallbackContext.isEmpty()) {
+        	for(int i = 0; i < this.onNewIntentGetExtraCallbackContext.size(); i++) {
+	            if (intent.hasExtra(this.onNewIntentGetExtraNameContext.get(i))) {
+	                PluginResult result = new PluginResult(
+                		PluginResult.Status.OK, 
+                		intent.getStringExtra(this.onNewIntentGetExtraNameContext.get(i))
+	                );
+	                result.setKeepCallback(true);
+	                this.onNewIntentGetExtraCallbackContext.get(i).sendPluginResult(result);
+	            } else {
+	                PluginResult result = new PluginResult(PluginResult.Status.ERROR);
+	                result.setKeepCallback(true);
+	                this.onNewIntentGetExtraCallbackContext.get(i).sendPluginResult(result);
+	            }
+        	}
         }
     }
 
@@ -214,7 +221,6 @@ public class WebIntent extends CordovaPlugin {
                 i.setType(type);
             }
         }
-
         for (String key : extras.keySet()) {
             String value = extras.get(key);
             // If type is text html, the extra text must sent as HTML
